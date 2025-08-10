@@ -1,4 +1,57 @@
-# Root .gitignore for Excel Template Mapper
+# Excel Template Mapper - Complete .gitignore
+
+# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production builds
+build/
+dist/
+*/build/
+*/dist/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# AWS and Amplify
+aws-exports.js
+awsconfiguration.json
+amplifyconfiguration.json
+amplify-gradle-config.json
+amplify-build-config.json
+amplifytools.xcconfig
+
+# Amplify build artifacts
+amplify/\#current-cloud-backend/
+amplify/.config/local-*
+amplify/mock-data/
+amplify/mock-api-resources/
+amplify/backend/amplify-meta.json
+amplify/backend/.temp/
+amplify/logs/
+
+# IDE and editors  
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Python
 __pycache__/
@@ -11,67 +64,78 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.venv
-*.egg-info/
-dist/
-build/
+.pytest_cache/
 
-# Django
+# Lambda deployment artifacts
+lambda-deployment-package.zip
+python-libs-layer.zip
+response.json
+
+# Logs
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-media/
-staticfiles/
-
-# Frontend
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm
-.yarn-integrity
-build/
-dist/
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-main.env
-*.env
-
-# IDE and editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Application specific
-temp_downloads/
-uploaded_files/
 logs/
-*.log
-test_*.py
-debug_*.py
-check_*.py
-session_*.json
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Security - Never commit these!
+*.pem
+*.key
+*.p12
+*.pfx
+config/secrets.json
+secrets/
+
+# Testing
+coverage/
+.nyc_output/
+.coverage
+
+# Package managers
+package-lock.json
+yarn.lock
+
+# Documentation builds
+docs/_build/
+
+# Local development
+.local/
+.temp/
+
+# CloudFormation outputs
+stack-outputs.json
+
+# AWS CLI profiles (if accidentally included)
+.aws/
 
 # Backup files
 *.bak
 *.backup
-*.tmp
+*.orig
+
+# Large files that shouldn't be in git
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Excel/CSV test files (unless specifically needed)
+*.xlsx
+*.xls
+*.csv
+test-files/
+
+# Application specific
+temp_downloads/
+uploaded_files/
+session_*.json
+
+# Amplify specific
+.secret-*
+**.sample

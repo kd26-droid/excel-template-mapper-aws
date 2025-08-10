@@ -2,8 +2,8 @@
 
 import axios from 'axios';
 
-// Use environment variable for API URL, fallback to relative path for production  
-const API_URL = process.env.REACT_APP_API_BASE_URL || '/api';
+// Use Lambda Function URL - no API Gateway needed
+const API_URL = process.env.REACT_APP_API_BASE_URL || 'https://im2ub4uthwtixmxta6melwygae0vjqjl.lambda-url.us-east-1.on.aws';
 
 // Auto-create demo session when needed
 let demoSessionId = null;

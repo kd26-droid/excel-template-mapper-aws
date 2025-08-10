@@ -1,0 +1,28 @@
+{
+  "CORSRules": [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+      "AllowedOrigins": [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://*.amplifyapp.com",
+        "https://your-domain.com"
+      ],
+      "ExposedHeaders": [
+        "ETag",
+        "x-amz-meta-custom-header",
+        "x-amz-meta-*",
+        "Content-Length",
+        "Content-Range"
+      ],
+      "MaxAgeSeconds": 3600
+    },
+    {
+      "AllowedHeaders": ["Authorization"],
+      "AllowedMethods": ["GET"],
+      "AllowedOrigins": ["*"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}

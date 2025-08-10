@@ -1,4 +1,4 @@
-# Gunicorn configuration file for Azure App Service
+# Gunicorn configuration file for production deployment
 # IMPORTANT: Using single worker to ensure session persistence across requests
 # Multi-worker configuration causes session loss due to separate memory spaces
 

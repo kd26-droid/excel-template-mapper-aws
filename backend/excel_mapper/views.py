@@ -23,40 +23,33 @@ from openpyxl.styles import Font, PatternFill
 
 from .bom_header_mapper import BOMHeaderMapper
 from .models import MappingTemplate, TagTemplate
-try:
-    from azure_storage import hybrid_file_manager
-except ImportError:
-    # Fallback to local file manager if azure_storage is not available
-    import os
-    import uuid
-    from pathlib import Path
-    from typing import Tuple
+from typing import Tuple
+
+class LocalFileManager:
+    def __init__(self):
+        self.local_upload_dir = Path(settings.BASE_DIR) / 'uploaded_files'
+        self.local_temp_dir = Path(settings.BASE_DIR) / 'temp_downloads'
+        self._ensure_local_directories()
     
-    class LocalFileManager:
-        def __init__(self):
-            self.local_upload_dir = Path(settings.BASE_DIR) / 'uploaded_files'
-            self.local_temp_dir = Path(settings.BASE_DIR) / 'temp_downloads'
-            self._ensure_local_directories()
-        
-        def _ensure_local_directories(self):
-            self.local_upload_dir.mkdir(parents=True, exist_ok=True)
-            self.local_temp_dir.mkdir(parents=True, exist_ok=True)
-        
-        def save_upload_file(self, file, prefix="upload") -> Tuple[str, str]:
-            file_extension = Path(file.name).suffix
-            unique_filename = f"{uuid.uuid4()}_{prefix}{file_extension}"
-            local_file_path = self.local_upload_dir / unique_filename
-            
-            with open(local_file_path, 'wb+') as destination:
-                for chunk in file.chunks():
-                    destination.write(chunk)
-            
-            return str(local_file_path), file.name
-        
-        def get_file_path(self, file_identifier: str) -> str:
-            return file_identifier
+    def _ensure_local_directories(self):
+        self.local_upload_dir.mkdir(parents=True, exist_ok=True)
+        self.local_temp_dir.mkdir(parents=True, exist_ok=True)
     
-    hybrid_file_manager = LocalFileManager()
+    def save_upload_file(self, file, prefix="upload") -> Tuple[str, str]:
+        file_extension = Path(file.name).suffix
+        unique_filename = f"{uuid.uuid4()}_{prefix}{file_extension}"
+        local_file_path = self.local_upload_dir / unique_filename
+        
+        with open(local_file_path, 'wb+') as destination:
+            for chunk in file.chunks():
+                destination.write(chunk)
+        
+        return str(local_file_path), file.name
+    
+    def get_file_path(self, file_identifier: str) -> str:
+        return file_identifier
+
+file_manager = LocalFileManager()
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -68,7 +61,7 @@ SESSION_STORE = {}
 def save_session_to_file(session_id, session_data):
     """Save session data to file for persistence."""
     try:
-        session_file = hybrid_file_manager.local_temp_dir / f"session_{session_id}.json"
+        session_file = file_manager.local_temp_dir / f"session_{session_id}.json"
         import json
         with open(session_file, 'w') as f:
             # Convert paths to strings for JSON serialization
@@ -86,7 +79,7 @@ def save_session_to_file(session_id, session_data):
 def load_session_from_file(session_id):
     """Load session data from file."""
     try:
-        session_file = hybrid_file_manager.local_temp_dir / f"session_{session_id}.json"
+        session_file = file_manager.local_temp_dir / f"session_{session_id}.json"
         if session_file.exists():
             import json
             with open(session_file, 'r') as f:
@@ -379,8 +372,8 @@ def upload_files(request):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Save uploaded files
-        client_path, client_original_name = hybrid_file_manager.save_upload_file(client_file, "client")
-        template_path, template_original_name = hybrid_file_manager.save_upload_file(template_file, "template")
+        client_path, client_original_name = file_manager.save_upload_file(client_file, "client")
+        template_path, template_original_name = file_manager.save_upload_file(template_file, "template")
         
         # Generate session ID
         session_id = str(uuid.uuid4())
@@ -419,7 +412,7 @@ def upload_files(request):
                 # Read client headers to apply template
                 mapper = BOMHeaderMapper()
                 client_headers = mapper.read_excel_headers(
-                    file_path=hybrid_file_manager.get_file_path(client_path),
+                    file_path=file_manager.get_file_path(client_path),
                     sheet_name=sheet_name,
                     header_row=header_row - 1 if header_row > 0 else 0
                 )
@@ -1209,7 +1202,7 @@ def download_file(request):
             format_type = request.GET.get('format', 'excel').lower()
         
         # Create output file
-        output_dir = hybrid_file_manager.local_temp_dir
+        output_dir = file_manager.local_temp_dir
         
         if format_type == 'csv':
             output_file = output_dir / f"processed_data_{session_id}.csv"
@@ -2971,12 +2964,12 @@ def system_diagnostics(request):
         sessions_info = []
         session_files_count = 0
         
-        if hybrid_file_manager.local_temp_dir.exists():
-            session_files = list(hybrid_file_manager.local_temp_dir.glob("session_*.json"))
+        if file_manager.local_temp_dir.exists():
+            session_files = list(file_manager.local_temp_dir.glob("session_*.json"))
             session_files_count = len(session_files)
         
         for session_id, session_data in list(SESSION_STORE.items())[-10:]:  # Last 10 sessions
-            session_file = hybrid_file_manager.local_temp_dir / f"session_{session_id}.json"
+            session_file = file_manager.local_temp_dir / f"session_{session_id}.json"
             sessions_info.append({
                 'session_id': session_id[:8] + "...",  # Truncate for security
                 'created': session_data.get('created'),
@@ -2989,14 +2982,14 @@ def system_diagnostics(request):
         
         # File system diagnostics
         file_system_info = {
-            'temp_dir_exists': hybrid_file_manager.local_temp_dir.exists(),
-            'upload_dir_exists': hybrid_file_manager.local_upload_dir.exists(),
-            'temp_dir_path': str(hybrid_file_manager.local_temp_dir),
-            'upload_dir_path': str(hybrid_file_manager.local_upload_dir),
+            'temp_dir_exists': file_manager.local_temp_dir.exists(),
+            'upload_dir_exists': file_manager.local_upload_dir.exists(),
+            'temp_dir_path': str(file_manager.local_temp_dir),
+            'upload_dir_path': str(file_manager.local_upload_dir),
         }
         
-        # Azure storage diagnostics
-        azure_available = hybrid_file_manager.azure_storage.is_available()
+        # Local storage only
+        local_storage_available = True
         
         # Session persistence health check
         persistence_health = {
@@ -3016,7 +3009,7 @@ def system_diagnostics(request):
             'fix_applied': True,
             'expected_behavior': 'Sessions persist across all requests within same server instance',
             'deployment_required': True,
-            'deployment_note': 'Restart Azure Web App to apply Gunicorn configuration changes',
+            'deployment_note': 'Restart server to apply configuration changes',
         }
         
         return Response({
@@ -3024,7 +3017,7 @@ def system_diagnostics(request):
             'system_info': system_info,
             'session_persistence': persistence_health,
             'file_system': file_system_info,
-            'azure_storage_available': azure_available,
+            'local_storage_available': local_storage_available,
             'recent_sessions': sessions_info,
             'fix_status': fix_status,
             'diagnostics_timestamp': datetime.utcnow().isoformat(),

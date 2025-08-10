@@ -1,0 +1,15 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-excel-template-mapper-dev-authRole",
+      "UnauthRoleName": "amplify-excel-template-mapper-dev-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::ACCOUNT-ID:role/amplify-excel-template-mapper-dev-authRole",
+      "UnauthRoleArn": "arn:aws:iam::ACCOUNT-ID:role/amplify-excel-template-mapper-dev-unauthRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-excel-template-mapper-dev-deployment",
+      "StackName": "amplify-excel-template-mapper-dev",
+      "StackId": "arn:aws:cloudformation:us-east-1:ACCOUNT-ID:stack/amplify-excel-template-mapper-dev/STACK-ID",
+      "AmplifyAppId": "APP-ID"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "features": {
+    "graphqltransformer": {
+      "addmissingownerfields": true,
+      "improvePluralization": false,
+      "validateTypeNameReservedWords": true,
+      "useExperimentalPipelinedTransformer": true,
+      "enableIterativeGSIUpdates": true,
+      "secondaryKeyAsGSI": true,
+      "skipOverrideMutationInputTypes": true,
+      "transformerVersion": 2,
+      "suppressSchemaMigrationPrompt": true,
+      "securityEnhancementNotification": false,
+      "showFieldAuthNotification": false,
+      "useSubUsernameForDefaultIdentityClaim": true,
+      "useFunctionalityOfGqlGenerateCommand": false
+    },
+    "frontend-ios": {
+      "enableXcodeIntegration": true
+    },
+    "auth": {
+      "enableCaseInsensitivity": true,
+      "useInclusiveTerminology": true,
+      "breakcirculardependency": true,
+      "forceAliasAttributes": false,
+      "useEnabledMfas": true
+    },
+    "codegen": {
+      "useAppSyncModelgenPlugin": true,
+      "useDoctypeDeclarationForGraphqlTypes": true,
+      "handleListNullabilityTransparently": true,
+      "emitAuthProvider": true,
+      "generateIndexRules": true,
+      "enableDartNullSafety": true,
+      "generateModelsForLazyLoadAndCustomSelectionSet": false
+    },
+    "appsync": {
+      "generateGraphQLPermissions": true
+    },
+    "latestRegionSupport": {
+      "pinpoint": 1,
+      "translate": 1,
+      "transcribe": 1,
+      "komprehend": 1,
+      "textract": 1,
+      "rekognition": 1
+    },
+    "project": {
+      "overrides": true
+    }
+  },
+  "debug": {
+    "shareProjectConfig": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "lambdaLayers": [],
+  "environmentMap": {
+    "AWS_REGION": {
+      "Ref": "AWS::Region"
+    },
+    "S3_BUCKET_UPLOADS": {
+      "Ref": "excelMapperStorageBucketName"
+    },
+    "S3_BUCKET_PROCESSED": {
+      "Ref": "excelMapperStorageBucketName"
+    },
+    "S3_BUCKET_TEMPLATES": {
+      "Ref": "excelMapperStorageBucketName"
+    },
+    "DYNAMODB_SESSIONS_TABLE": "ExcelMapper_Sessions",
+    "DYNAMODB_TEMPLATES_TABLE": "ExcelMapper_Templates",
+    "DYNAMODB_TAG_TEMPLATES_TABLE": "ExcelMapper_TagTemplates",
+    "DYNAMODB_PROCESSING_JOBS_TABLE": "ExcelMapper_ProcessingJobs"
+  },
+  "runtime": "python3.9",
+  "timeout": 300
+}

@@ -1,0 +1,555 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Excel Template Mapper - Complete Serverless Infrastructure'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: Environment name
+  
+  ProjectName:
+    Type: String
+    Default: 'excel-template-mapper'
+    Description: Project name for resource naming
+
+Resources:
+  # ==============================
+  # S3 BUCKETS
+  # ==============================
+  
+  ExcelMapperUploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-uploads-${Environment}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldUploads
+            Status: Enabled
+            ExpirationInDays: 7
+          - Id: DeleteIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - ETag
+              - x-amz-meta-*
+            MaxAge: 3600
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt ExcelMapperLambdaFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/
+
+  ExcelMapperProcessedBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-processed-${Environment}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldProcessed
+            Status: Enabled
+            ExpirationInDays: 30
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - ETag
+              - x-amz-meta-*
+            MaxAge: 3600
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  ExcelMapperTemplatesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-templates-${Environment}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - ETag
+              - x-amz-meta-*
+            MaxAge: 3600
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # ==============================
+  # DYNAMODB TABLES
+  # ==============================
+
+  ExcelMapperSessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}_Sessions_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: session_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: session_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  ExcelMapperTemplatesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}_Templates_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+        - AttributeName: usage_count
+          AttributeType: N
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: CreatedAtIndex
+          KeySchema:
+            - AttributeName: created_at
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: UsageCountIndex
+          KeySchema:
+            - AttributeName: usage_count
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  ExcelMapperTagTemplatesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}_TagTemplates_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  ExcelMapperProcessingJobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}_ProcessingJobs_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ==============================
+  # IAM ROLES
+  # ==============================
+
+  ExcelMapperLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-lambda-execution-role-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetObjectVersion
+                Resource:
+                  - !Sub '${ExcelMapperUploadsBucket}/*'
+                  - !Sub '${ExcelMapperProcessedBucket}/*'
+                  - !Sub '${ExcelMapperTemplatesBucket}/*'
+                  - !GetAtt ExcelMapperUploadsBucket.Arn
+                  - !GetAtt ExcelMapperProcessedBucket.Arn
+                  - !GetAtt ExcelMapperTemplatesBucket.Arn
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !GetAtt ExcelMapperSessionsTable.Arn
+                  - !GetAtt ExcelMapperTemplatesTable.Arn
+                  - !GetAtt ExcelMapperTagTemplatesTable.Arn
+                  - !GetAtt ExcelMapperProcessingJobsTable.Arn
+                  - !Sub '${ExcelMapperTemplatesTable.Arn}/index/*'
+                  - !Sub '${ExcelMapperProcessingJobsTable.Arn}/index/*'
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                  - logs:DescribeLogGroups
+                Resource: '*'
+
+  # ==============================
+  # LAMBDA FUNCTION
+  # ==============================
+
+  ExcelMapperLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-main-${Environment}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt ExcelMapperLambdaExecutionRole.Arn
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          AWS_REGION: !Ref 'AWS::Region'
+          S3_BUCKET_UPLOADS: !Ref ExcelMapperUploadsBucket
+          S3_BUCKET_PROCESSED: !Ref ExcelMapperProcessedBucket
+          S3_BUCKET_TEMPLATES: !Ref ExcelMapperTemplatesBucket
+          DYNAMODB_SESSIONS_TABLE: !Ref ExcelMapperSessionsTable
+          DYNAMODB_TEMPLATES_TABLE: !Ref ExcelMapperTemplatesTable
+          DYNAMODB_TAG_TEMPLATES_TABLE: !Ref ExcelMapperTagTemplatesTable
+          DYNAMODB_PROCESSING_JOBS_TABLE: !Ref ExcelMapperProcessingJobsTable
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          import json
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'headers': {
+                      'Access-Control-Allow-Origin': '*',
+                      'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+                  },
+                  'body': json.dumps({'message': 'Excel Mapper Lambda - Placeholder'})
+              }
+      TracingConfig:
+        Mode: Active
+      ReservedConcurrencyLimit: 100
+      DeadLetterConfig:
+        TargetArn: !GetAtt ExcelMapperDLQ.Arn
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ==============================
+  # LAMBDA LAYERS
+  # ==============================
+
+  ExcelMapperPythonLibsLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: !Sub '${ProjectName}-python-libs-${Environment}'
+      Description: Python libraries for Excel processing
+      Content:
+        S3Bucket: !Ref ExcelMapperTemplatesBucket
+        S3Key: layers/python-libs.zip
+      CompatibleRuntimes:
+        - python3.9
+      LicenseInfo: MIT
+
+  # ==============================
+  # SQS DEAD LETTER QUEUE
+  # ==============================
+
+  ExcelMapperDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${ProjectName}-dlq-${Environment}'
+      MessageRetentionPeriod: 1209600  # 14 days
+      VisibilityTimeoutSeconds: 60
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ==============================
+  # API GATEWAY
+  # ==============================
+
+  ExcelMapperApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub '${ProjectName}-api-${Environment}'
+      Description: Excel Template Mapper REST API
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Policy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: execute-api:Invoke
+            Resource: '*'
+
+  # API Gateway Resources and Methods would go here
+  # Simplified for brevity - you would add all your endpoints
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ExcelMapperApiGateway
+    Properties:
+      RestApiId: !Ref ExcelMapperApiGateway
+      StageName: !Ref Environment
+      StageDescription:
+        Variables:
+          lambdaAlias: !Ref Environment
+
+  # ==============================
+  # CLOUDWATCH LOG GROUPS
+  # ==============================
+
+  ExcelMapperLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ProjectName}-main-${Environment}'
+      RetentionInDays: 14
+
+  ApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${ProjectName}-api-${Environment}'
+      RetentionInDays: 14
+
+  # ==============================
+  # CLOUDWATCH ALARMS
+  # ==============================
+
+  LambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-lambda-errors-${Environment}'
+      AlarmDescription: Lambda function errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ExcelMapperLambdaFunction
+      TreatMissingData: notBreaching
+
+  LambdaDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-lambda-duration-${Environment}'
+      AlarmDescription: Lambda function duration
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 250000  # 250 seconds
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ExcelMapperLambdaFunction
+      TreatMissingData: notBreaching
+
+  # ==============================
+  # S3 BUCKET PERMISSIONS
+  # ==============================
+
+  S3InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ExcelMapperLambdaFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt ExcelMapperUploadsBucket.Arn
+
+Outputs:
+  # S3 Buckets
+  UploadsBucketName:
+    Description: S3 bucket for file uploads
+    Value: !Ref ExcelMapperUploadsBucket
+    Export:
+      Name: !Sub '${ProjectName}-uploads-bucket-${Environment}'
+
+  ProcessedBucketName:
+    Description: S3 bucket for processed files
+    Value: !Ref ExcelMapperProcessedBucket
+    Export:
+      Name: !Sub '${ProjectName}-processed-bucket-${Environment}'
+
+  TemplatesBucketName:
+    Description: S3 bucket for templates
+    Value: !Ref ExcelMapperTemplatesBucket
+    Export:
+      Name: !Sub '${ProjectName}-templates-bucket-${Environment}'
+
+  # DynamoDB Tables
+  SessionsTableName:
+    Description: DynamoDB table for sessions
+    Value: !Ref ExcelMapperSessionsTable
+    Export:
+      Name: !Sub '${ProjectName}-sessions-table-${Environment}'
+
+  TemplatesTableName:
+    Description: DynamoDB table for templates
+    Value: !Ref ExcelMapperTemplatesTable
+    Export:
+      Name: !Sub '${ProjectName}-templates-table-${Environment}'
+
+  # Lambda Function
+  LambdaFunctionName:
+    Description: Lambda function name
+    Value: !Ref ExcelMapperLambdaFunction
+    Export:
+      Name: !Sub '${ProjectName}-lambda-function-${Environment}'
+
+  LambdaFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt ExcelMapperLambdaFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-lambda-arn-${Environment}'
+
+  # API Gateway
+  ApiGatewayUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${ExcelMapperApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${ProjectName}-api-url-${Environment}'
+
+  # CloudWatch Log Groups
+  LambdaLogGroup:
+    Description: Lambda CloudWatch Log Group
+    Value: !Ref ExcelMapperLogGroup
+    Export:
+      Name: !Sub '${ProjectName}-lambda-logs-${Environment}'

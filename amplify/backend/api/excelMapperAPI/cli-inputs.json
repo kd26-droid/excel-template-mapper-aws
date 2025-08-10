@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "paths": {
+    "/health": {
+      "name": "/health",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/upload": {
+      "name": "/upload",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/headers/{session_id}": {
+      "name": "/headers/{session_id}",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/mapping": {
+      "name": "/mapping",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/mapping/save": {
+      "name": "/mapping/save",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/data": {
+      "name": "/data",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/download": {
+      "name": "/download",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/templates": {
+      "name": "/templates",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/templates/save": {
+      "name": "/templates/save",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/formulas/apply": {
+      "name": "/formulas/apply",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/create-factwise-id": {
+      "name": "/create-factwise-id",
+      "lambdaFunction": "excelMapper",
+      "permissions": {
+        "setting": "open"
+      }
+    }
+  }
+}

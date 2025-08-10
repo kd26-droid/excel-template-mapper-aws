@@ -1,0 +1,21 @@
+{
+  "resourceName": "excelMapperStorage",
+  "bucketName": "excel-mapper-storage",
+  "policyUUID": "a12b3c4d",
+  "storageAccess": "authAndGuest",
+  "guestAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "NONE",
+  "lambdaFilters": [],
+  "adminTriggerFunction": {
+    "triggerFunction": "NONE"
+  }
+}

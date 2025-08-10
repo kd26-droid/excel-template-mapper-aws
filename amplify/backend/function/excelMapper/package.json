@@ -1,0 +1,14 @@
+{
+  "name": "excel-mapper-lambda",
+  "version": "2.0.0",
+  "description": "AWS Lambda function for Excel Template Mapper",
+  "main": "index.py",
+  "scripts": {
+    "build": "echo 'Build completed'",
+    "test": "echo 'No tests specified'"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "author": "Excel Mapper Team",
+  "license": "MIT"
+}

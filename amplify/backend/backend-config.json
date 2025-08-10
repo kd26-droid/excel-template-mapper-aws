@@ -1,0 +1,51 @@
+{
+  "function": {
+    "excelMapper": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda",
+      "dependsOn": [
+        {
+          "category": "storage",
+          "resourceName": "excelMapperStorage",
+          "attributes": ["BucketName"]
+        }
+      ]
+    }
+  },
+  "api": {
+    "excelMapperAPI": {
+      "service": "API Gateway",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [
+        {
+          "category": "function",
+          "resourceName": "excelMapper",
+          "attributes": ["Name", "Arn"]
+        }
+      ]
+    }
+  },
+  "storage": {
+    "excelMapperStorage": {
+      "service": "S3",
+      "providerPlugin": "awscloudformation"
+    },
+    "ExcelMapperSessions": {
+      "service": "DynamoDB",
+      "providerPlugin": "awscloudformation"
+    },
+    "ExcelMapperTemplates": {
+      "service": "DynamoDB", 
+      "providerPlugin": "awscloudformation"
+    },
+    "ExcelMapperTagTemplates": {
+      "service": "DynamoDB",
+      "providerPlugin": "awscloudformation"
+    },
+    "ExcelMapperProcessingJobs": {
+      "service": "DynamoDB",
+      "providerPlugin": "awscloudformation"
+    }
+  }
+}
